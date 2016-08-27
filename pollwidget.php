@@ -12,7 +12,17 @@ class Poll_Widget extends WP_Widget
 	{
 		parent::__construct('poll', 'Sondage', array('description' =>'Un sondage personnalisable.'));
 		add_action('admin_menu',array($this,'add_admin_menu'), 20);
+		add_action('admin_init',array($this,'register_settings'));
 	}
+
+	/**
+	 * Enregistre une option dans le groupe d'options poll_settings
+	 */
+	public function register_settings()
+	{
+		register_setting('poll_settings', 'question');
+	}
+
 
 	/**
 	 * Fonction qui crée un sous menu dans l'interface d'administration 
@@ -22,12 +32,24 @@ class Poll_Widget extends WP_Widget
 		add_submenu_page('poll','Sondage','Editer', 'manage_options', 'poll_sondage', array($this,'menu_html')); 
 	}
 
+
 	/**
 	 * Fonction affichage du sous menu dans l'interface d'administration
 	 */
 	public function menu_html()
 	{
 		echo '<h1>'.get_admin_page_title().'</h1>';
+?>
+		<form method="post" action="options.php">
+		<?php settings_fields('poll_settings'); ?>
+			<label> Question : </label>
+			<input type="text" name="question" value="<?php echo get_option('question');?>" />
+			</br>
+			<label> Ajouter une nouvelle réponse : </label>
+			<input type="text" name = "ajout_reponse" value="<?php echo get_option('ajout_reponse');?>"/>
+			<?php submit_button(); ?>
+<?php
+
 	}
 
 
