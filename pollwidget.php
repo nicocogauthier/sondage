@@ -14,6 +14,7 @@ class Poll_Widget extends WP_Widget
 		add_action('admin_menu', array($this,'add_admin_menu'), 20);
 		add_action('admin_init', array($this,'register_settings'));
 		add_action('wp_loaded', array($this, 'insert_reponse_poll_options'));
+		/*	add_action('wp_loaded', array($this, 'reset_bdd'));*/
 	}
 
 
@@ -22,7 +23,14 @@ class Poll_Widget extends WP_Widget
 	 */
 	public function register_settings()
 	{
-		register_setting('poll_settings', 'poll_question');
+		if(isset($_POST['reset_bdd']) && !empty($_POST['reset_bdd'])){
+			unregister_setting('poll_settings', 'poll_question');
+		}
+		else {
+			register_setting('poll_settings', 'poll_question');
+		}
+		
+
 		add_settings_section('poll_section','Paramètres',array($this,'section_html'), 'poll_settings');
 		add_settings_field('poll_question','Question', array($this,'question_html'), 'poll_settings', 'poll_section');
 					
@@ -62,7 +70,7 @@ class Poll_Widget extends WP_Widget
 
 
 	/**
-	 * Définit le html pour le champ  question du formulaire 
+	 * Ajoute le html pour le champ  question du formulaire 
 	 */
 	public function question_html()	
 	{
@@ -120,18 +128,21 @@ class Poll_Widget extends WP_Widget
 	public function ajouter_reponse()
 	{
 		$this->insert_reponse_poll_options();
-		global $wpdb;
-		$recipients = $wpdb->get_results("SELECT label FROM wp_poll_options");
-		foreach ($recipients as $_recipient) {
-			
+	}
+
+	/**
+	 * Vide les tables wp_poll_options et wp_poll_results
+	 */
+	public function reset_bdd()	
+	{
+		if(isset($_POST['reset_bdd']) && !empty($_POST['reset_bdd'])){
+			global $wpdb;
+			$wpdb->query("DELETE FROM wp_poll_options WHERE 1=1");
 		}
 	}
 
-
-
-
 	/**
-	 * Définit ce qu'il faut faire lorsqu'on souhaite enregister une nouvelle réponse
+	 * Définit ce qu'il faut faire lorsqu'on clique sur un des boutons
 	 */ 
 
 
@@ -139,8 +150,11 @@ class Poll_Widget extends WP_Widget
 	{
 		if(isset($_POST['poll_ajout_reponse'])){
 			$this->ajouter_reponse();
-
 		}
+		if(isset($_POST['reset_bdd'])){
+			$this->reset_bdd();
+		}
+
 	}
 
 
@@ -156,10 +170,15 @@ class Poll_Widget extends WP_Widget
 		echo '<h1>'.get_admin_page_title().'</h1>';
 ?>
 		<form method="post" action="options.php">
-		<?php settings_fields('poll_settings'); ?>
-		<?php do_settings_sections('poll_settings');?>
-		<?php submit_button(); ?>
+			<?php settings_fields('poll_settings'); ?>
+			<?php do_settings_sections('poll_settings');?>
+			<?php submit_button(); ?>
 		</form>
+
+		<form method="post" action="">
+			<input type="hidden" name="reset_bdd" value="1" />
+			<?php submit_button('Réinitialiser les options et les résultats'); ?>
+		</form>	
 <?php
 
 	}
