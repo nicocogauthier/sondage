@@ -11,8 +11,9 @@ class Poll_Widget extends WP_Widget
     public function __construct()
 	{
 		parent::__construct('poll', 'Sondage', array('description' =>'Un sondage personnalisable.'));
-		add_action('admin_menu',array($this,'add_admin_menu'), 20);
-		add_action('admin_init',array($this,'register_settings'));
+		add_action('admin_menu', array($this,'add_admin_menu'), 20);
+		add_action('admin_init', array($this,'register_settings'));
+		add_action('wp_loaded', array($this, 'insert_reponse_poll_options'));
 	}
 
 
@@ -24,8 +25,18 @@ class Poll_Widget extends WP_Widget
 		register_setting('poll_settings', 'poll_question');
 		add_settings_section('poll_section','Paramètres',array($this,'section_html'), 'poll_settings');
 		add_settings_field('poll_question','Question', array($this,'question_html'), 'poll_settings', 'poll_section');
-		add_settings_field('poll_ajout_reponse', 'Ajouter une nouvelle réponse', array($this,'ajout_reponse_html'), 'poll_settings', 'poll_section');
+					
+			
+	global $wpdb;
+		$recipients = $wpdb->get_results("SELECT id,label FROM wp_poll_options");
+		foreach ($recipients as $_recipient) {
+			register_setting('poll_settings','poll_ajout_reponse_'.$_recipient->id);
+			add_settings_field('poll_ajout_reponse_'.$_recipient->id, '', array($this, 'ajout_reponse_bdd'), 'poll_settings', 'poll_section',array($_recipient->id, $_recipient->label));
+		}
+	add_settings_field('poll_ajout_reponse', 'Ajouter une nouvelle réponse', array($this,'ajout_reponse_html'), 'poll_settings', 'poll_section');
+		
 	}
+
 
 
 
@@ -44,13 +55,14 @@ class Poll_Widget extends WP_Widget
 	 */
 	public function add_admin_menu()
 	{
-		add_submenu_page('poll','Sondage','Editer', 'manage_options', 'poll_sondage', array($this,'menu_html')); 
+		$hook = add_submenu_page('poll','Sondage','Editer', 'manage_options', 'poll_sondage', array($this,'menu_html')); 
+		add_action('load-'.$hook, array($this,'process_action'));
 	}
 
 
 
 	/**
-	 * Définit la question du formulaire 
+	 * Définit le html pour le champ  question du formulaire 
 	 */
 	public function question_html()	
 	{
@@ -61,32 +73,93 @@ class Poll_Widget extends WP_Widget
 
 
 	/**
-	 * Ajoute une réponse au formulaire 
+	 * Ajoute le html pour le champ  réponse au formulaire 
 	 */
 	public function ajout_reponse_html()
 	{		
 ?>	
-		<input type="text" name="poll_ajout_question" value="<?php echo get_option('poll_ajout_question');?>" />
+		<input type="text" name="poll_ajout_reponse" value="<?php echo get_option('poll_ajout_reponse');?>" />
+<?php
+	}
+
+
+	/*
+	 * Ajoute le html pour une reponse provenant de la bdd poll_options
+	*/
+	public function ajout_reponse_bdd($args)
+	{
+?>
+		<input type="text" name="<?php echo 'poll_ajout_reponse_'.$args[0]?> " value="<?php echo $args[1];?>" />
 <?php
 	}
 
 
 
+	/** Inscrire la nouvelle réponse dans la bdd
+	 *
+	 */
+	public function insert_reponse_poll_options()
+	{
+		if(isset($_POST['poll_ajout_reponse']) && !empty($_POST['poll_ajout_reponse'])){
+			global $wpdb;
+			$reponse = $_POST['poll_ajout_reponse'];
+
+			$row = $wpdb->get_row("SELECT * FROM wp_poll_options WHERE label ='$reponse'");
+			if(is_null($row)) {
+				$wpdb->insert("wp_poll_options", array('label' => $reponse));
+			}
+
+		}
+	}
+
+
+
+	/**
+	 * Ajouter la nouvelle réponse au formulaire
+	 */
+	public function ajouter_reponse()
+	{
+		$this->insert_reponse_poll_options();
+		global $wpdb;
+		$recipients = $wpdb->get_results("SELECT label FROM wp_poll_options");
+		foreach ($recipients as $_recipient) {
+			
+		}
+	}
+
+
+
+
+	/**
+	 * Définit ce qu'il faut faire lorsqu'on souhaite enregister une nouvelle réponse
+	 */ 
+
+
+	public function process_action()
+	{
+		if(isset($_POST['poll_ajout_reponse'])){
+			$this->ajouter_reponse();
+
+		}
+	}
+
+
+
+	 
+
 	/**
 	 * Fonction affichage du sous menu dans l'interface d'administration
 	 */
+
 	public function menu_html()
 	{
 		echo '<h1>'.get_admin_page_title().'</h1>';
 ?>
 		<form method="post" action="options.php">
 		<?php settings_fields('poll_settings'); ?>
-		<?php do_settings_sections('poll_settings');
-		/*	<label> Question : </label>
-			</br>
-			<label> Ajouter une nouvelle réponse : </label>
-			<input type="text" name = "ajout_reponse" value="<?php echo get_option('ajout_reponse');?>"/> */ ?>
-			<?php submit_button(); ?>
+		<?php do_settings_sections('poll_settings');?>
+		<?php submit_button(); ?>
+		</form>
 <?php
 
 	}
