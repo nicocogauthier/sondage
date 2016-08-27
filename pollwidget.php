@@ -11,7 +11,25 @@ class Poll_Widget extends WP_Widget
     public function __construct()
 	{
 		parent::__construct('poll', 'Sondage', array('description' =>'Un sondage personnalisable.'));
-    }
+		add_action('admin_menu',array($this,'add_admin_menu'), 20);
+	}
+
+	/**
+	 * Fonction qui crée un sous menu dans l'interface d'administration 
+	 */
+	public function add_admin_menu()
+	{
+		add_submenu_page('poll','Sondage','Editer', 'manage_options', 'poll_sondage', array($this,'menu_html')); 
+	}
+
+	/**
+	 * Fonction affichage du sous menu dans l'interface d'administration
+	 */
+	public function menu_html()
+	{
+		echo '<h1>'.get_admin_page_title().'</h1>';
+	}
+
 
     /**
      * Affichage du widget

@@ -28,8 +28,11 @@ class Poll_Plugin
 	public function add_admin_menu()
 	{
 		add_menu_page('Créer un sondage : poll', 'poll plugin', 'manage_options', 'poll', array($this, 'menu_html'));
+		add_submenu_page('poll', 'Créer un sondage avec poll_plugin', 'Réglages', 'manage_options', 'poll', array($this, 'menu_html'));
 	}
 
+	
+	 
 	/**
 	 * Fonction affichage du menu dans l'interface d'administration
 	 */
