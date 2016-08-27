@@ -15,13 +15,28 @@ class Poll_Widget extends WP_Widget
 		add_action('admin_init',array($this,'register_settings'));
 	}
 
+
 	/**
 	 * Enregistre une option dans le groupe d'options poll_settings
 	 */
 	public function register_settings()
 	{
-		register_setting('poll_settings', 'question');
+		register_setting('poll_settings', 'poll_question');
+		add_settings_section('poll_section','Paramètres',array($this,'section_html'), 'poll_settings');
+		add_settings_field('poll_question','Question', array($this,'question_html'), 'poll_settings', 'poll_section');
+		add_settings_field('poll_ajout_reponse', 'Ajouter une nouvelle réponse', array($this,'ajout_reponse_html'), 'poll_settings', 'poll_section');
 	}
+
+
+
+	/**
+	 * Renseigne l'introduction au formulaire
+	 */
+	public function section_html()
+	{
+		echo 'Renseignez les paramètres du formulaire';
+	}
+
 
 
 	/**
@@ -33,6 +48,30 @@ class Poll_Widget extends WP_Widget
 	}
 
 
+
+	/**
+	 * Définit la question du formulaire 
+	 */
+	public function question_html()	
+	{
+?>
+		<input type="text" name="poll_question" value="<?php echo get_option('poll_question');?>" />
+<?php
+	}
+
+
+	/**
+	 * Ajoute une réponse au formulaire 
+	 */
+	public function ajout_reponse_html()
+	{		
+?>	
+		<input type="text" name="poll_ajout_question" value="<?php echo get_option('poll_ajout_question');?>" />
+<?php
+	}
+
+
+
 	/**
 	 * Fonction affichage du sous menu dans l'interface d'administration
 	 */
@@ -42,11 +81,11 @@ class Poll_Widget extends WP_Widget
 ?>
 		<form method="post" action="options.php">
 		<?php settings_fields('poll_settings'); ?>
-			<label> Question : </label>
-			<input type="text" name="question" value="<?php echo get_option('question');?>" />
+		<?php do_settings_sections('poll_settings');
+		/*	<label> Question : </label>
 			</br>
 			<label> Ajouter une nouvelle réponse : </label>
-			<input type="text" name = "ajout_reponse" value="<?php echo get_option('ajout_reponse');?>"/>
+			<input type="text" name = "ajout_reponse" value="<?php echo get_option('ajout_reponse');?>"/> */ ?>
 			<?php submit_button(); ?>
 <?php
 
