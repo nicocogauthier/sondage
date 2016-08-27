@@ -19,9 +19,19 @@ class Poll_Plugin
 		add_action('widgets_init', function(){register_widget('Poll_Widget');});
 		register_activation_hook(__FILE__, array('Poll_Plugin','install'));
 		register_uninstall_hook(__FILE__, array('Poll_Plugin','uninstall'));
+		add_action('admin_menu', array($this,'add_admin_menu'));
 	}
 
+	/** 
+     * Fonction de création du menu dans l'interface d'administration
+	*/
+	public function add_admin_menu()
+	{
+		add_menu_page('Mon premier plugin', 'poll plugin', 'manage_options', 'poll', array($this, 'menu_html'));
+	}
 
+	
+	 
     /**
      * Fonction d'installation
      */
