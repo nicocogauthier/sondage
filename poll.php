@@ -27,10 +27,17 @@ class Poll_Plugin
 	*/
 	public function add_admin_menu()
 	{
-		add_menu_page('Mon premier plugin', 'poll plugin', 'manage_options', 'poll', array($this, 'menu_html'));
+		add_menu_page('Créer un sondage : poll', 'poll plugin', 'manage_options', 'poll', array($this, 'menu_html'));
 	}
 
-	
+	/**
+	 * Fonction affichage du menu dans l'interface d'administration
+	 */
+	public function menu_html()
+	{
+		echo '<h1>'.get_admin_page_title().'</h1>';
+		echo '<p>Bienvenue sur la page d\'accueil de poll_plugin</p>';
+	}	
 	 
     /**
      * Fonction d'installation
