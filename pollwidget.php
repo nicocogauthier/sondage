@@ -5,6 +5,8 @@
  */
 class Poll_Widget extends WP_Widget
 {
+	private $_compteur ;
+
     /**
      * Constructeur
      */
@@ -14,7 +16,8 @@ class Poll_Widget extends WP_Widget
 		add_action('admin_menu', array($this,'add_admin_menu'), 20);
 		add_action('admin_init', array($this,'register_settings'));
 		add_action('wp_loaded', array($this, 'insert_reponse_poll_options'));
-		/*	add_action('wp_loaded', array($this, 'reset_bdd'));*/
+		add_action('wp_loaded', array($this, 'ajout_reponse_client'));
+		
 	}
 
 
@@ -142,6 +145,31 @@ class Poll_Widget extends WP_Widget
 	}
 
 	/**
+	 * Inscrit la réponse du client dans la base de données wp_poll_results
+	 */
+	public function ajout_reponse_client()
+	{
+		if(isset($_POST['reponse_client']) && !empty($_POST['reponse_client'])){
+			global $wpdb;
+			$reponse = $_POST['reponse_client'];
+			$row = $wpdb->get_row("SELECT * FROM wp_poll_results WHERE option_id ='$reponse'");
+			if(is_null($row)) {
+				
+				$wpdb->insert("wp_poll_results", array('option_id' => $reponse,'total' => $this->_compteur+1));
+			}
+			else
+			{
+				$this->_compteur = $row->total + 1;
+				$wpdb->update("wp_poll_results", array('total' => $this->_compteur),array('option_id' => $reponse));
+			}
+
+		}
+	}
+
+
+
+
+	/**
 	 * Définit ce qu'il faut faire lorsqu'on clique sur un des boutons
 	 */ 
 
@@ -154,7 +182,9 @@ class Poll_Widget extends WP_Widget
 		if(isset($_POST['reset_bdd'])){
 			$this->reset_bdd();
 		}
-
+		if(isset($_POST['reponse_client'])){
+			$this->ajout_reponse_client();
+		}
 	}
 
 
@@ -193,20 +223,49 @@ class Poll_Widget extends WP_Widget
 		echo $args['before_title'];
 		echo apply_filters('widget_title', $instance['title']);
 		echo $args['after_title'];
+
+		global $wpdb;
+		$recipients_options = $wpdb->get_results("SELECT id,label FROM wp_poll_options");
+		if(!isset($_POST['reponse_client']))
+		{	
 ?>
+		<h4><?php echo get_option('poll_question');?> </h4></br>
 		<form action="" method="post">
-			<p>
-				<label for="question_sondage"> Question : </label>
-				<input id="question_sondage" name="question_sondage" type="text"/>
-			</p>
-			<input type="submit"/>
+		<p>
+			<?php foreach ($recipients_options as $_recipient) { ?>
+				<label for ="<?php echo $_recipient->id;?>"> <?php echo $_recipient->label;?></label>
+				<input type="radio" name="reponse_client" value="<?php echo $_recipient->id;?>" id="<?php echo $_recipient->id;?>"/></br></br>
+<?php			
+			}
+?>		
+		</p></br>
+		<input type="submit"/>
 		</form>
 <?php
+		}
+		else
+		{
+?>			
+			<h4> Résultats </h4></br>
+<?php	
+			$recipients_options = $wpdb->get_results("SELECT id,label FROM wp_poll_options");			
+			foreach($recipients_options as $_recipient) { 
+				$option_id = $_recipient->id;			
+				$total_reponses = $wpdb->get_results("SELECT total FROM wp_poll_results WHERE option_id ='$option_id'");
+				foreach($total_reponses as $total_reponse){				
+?>			
+					<p> <?php echo $_recipient->label.' : '; ?>
+					<?php echo $total_reponse->total.' '; ?> vote(s) </p>
+<?php
+				}	
+			}
+		}
+
 		echo $args['after_widget'];
     }
 
     /**
-     * Affichage du formulaire dans l'administration
+     * Affichage du formulaire dans l'administration widget
      */
     public function form($instance)
 	{
