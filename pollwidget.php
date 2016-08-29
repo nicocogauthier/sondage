@@ -259,7 +259,7 @@ class Poll_Widget extends WP_Widget
 		if(isset($_COOKIE['vote'])||isset($_POST['reponse_client']) )
 		{
 ?>			
-			<h4> Résultats  COucou</h4></br>
+			<h4> Résultats :</h4></br>
 <?php	
 			$recipients_options = $wpdb->get_results("SELECT id,label FROM wp_poll_options");			
 			foreach($recipients_options as $_recipient) { 
