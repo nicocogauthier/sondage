@@ -2,7 +2,9 @@
 
 /**
  * Classe Poll_Widget
+ *
  */
+
 class Poll_Widget extends WP_Widget
 {
 	private $_compteur ;
@@ -17,6 +19,7 @@ class Poll_Widget extends WP_Widget
 		add_action('admin_init', array($this,'register_settings'));
 		add_action('wp_loaded', array($this, 'insert_reponse_poll_options'));
 		add_action('wp_loaded', array($this, 'ajout_reponse_client'));
+		add_action('wp_loaded', array($this, 'reset_bdd')); 
 		
 	}
 
@@ -67,8 +70,10 @@ class Poll_Widget extends WP_Widget
 	public function add_admin_menu()
 	{
 		$hook = add_submenu_page('poll','Sondage','Editer', 'manage_options', 'poll_sondage', array($this,'menu_html')); 
-		add_action('load-'.$hook, array($this,'process_action'));
+		add_action('load-'.$hook, array($this,'process_action_back'));
+
 	}
+
 
 
 
@@ -83,6 +88,8 @@ class Poll_Widget extends WP_Widget
 	}
 
 
+
+
 	/**
 	 * Ajoute le html pour le champ  réponse au formulaire 
 	 */
@@ -92,6 +99,8 @@ class Poll_Widget extends WP_Widget
 		<input type="text" name="poll_ajout_reponse" value="<?php echo get_option('poll_ajout_reponse');?>" />
 <?php
 	}
+
+
 
 
 	/*
@@ -114,12 +123,10 @@ class Poll_Widget extends WP_Widget
 		if(isset($_POST['poll_ajout_reponse']) && !empty($_POST['poll_ajout_reponse'])){
 			global $wpdb;
 			$reponse = $_POST['poll_ajout_reponse'];
-
 			$row = $wpdb->get_row("SELECT * FROM wp_poll_options WHERE label ='$reponse'");
 			if(is_null($row)) {
 				$wpdb->insert("wp_poll_options", array('label' => $reponse));
 			}
-
 		}
 	}
 
@@ -133,6 +140,10 @@ class Poll_Widget extends WP_Widget
 		$this->insert_reponse_poll_options();
 	}
 
+
+
+
+
 	/**
 	 * Vide les tables wp_poll_options et wp_poll_results
 	 */
@@ -141,28 +152,36 @@ class Poll_Widget extends WP_Widget
 		if(isset($_POST['reset_bdd']) && !empty($_POST['reset_bdd'])){
 			global $wpdb;
 			$wpdb->query("DELETE FROM wp_poll_options WHERE 1=1");
+			$wpdb->query("DELETE FROM wp_poll_results WHERE 1=1");
 		}
 	}
 
+
+
+
 	/**
-	 * Inscrit la réponse du client dans la base de données wp_poll_results
+	 * Inscrit la réponse du client dans la base de données wp_poll_results et crée un COOKIE
 	 */
 	public function ajout_reponse_client()
 	{
-		if(isset($_POST['reponse_client']) && !empty($_POST['reponse_client'])){
+		if(isset($_POST['reset_bdd']) && !empty($_POST['reset_bdd'])){
+				setcookie("vote",NULL,time(),"/wordpress/");
+			}
+
+		
+		if(isset($_POST['reponse_client']) && !empty($_POST['reponse_client'])){	
+			setcookie("vote","oui", time() + 2*24*3600);
 			global $wpdb;
 			$reponse = $_POST['reponse_client'];
 			$row = $wpdb->get_row("SELECT * FROM wp_poll_results WHERE option_id ='$reponse'");
-			if(is_null($row)) {
-				
+			if(is_null($row)) {			
 				$wpdb->insert("wp_poll_results", array('option_id' => $reponse,'total' => $this->_compteur+1));
 			}
 			else
 			{
 				$this->_compteur = $row->total + 1;
-				$wpdb->update("wp_poll_results", array('total' => $this->_compteur),array('option_id' => $reponse));
+				$wpdb->update("wp_poll_results", array('total' => $this->_compteur),array('option_id' => $reponse));			
 			}
-
 		}
 	}
 
@@ -170,11 +189,11 @@ class Poll_Widget extends WP_Widget
 
 
 	/**
-	 * Définit ce qu'il faut faire lorsqu'on clique sur un des boutons
+	 * Définit ce qu'il faut faire lorsqu'on clique sur un des boutons dans l'interface d'administration
 	 */ 
 
 
-	public function process_action()
+	public function process_action_back()
 	{
 		if(isset($_POST['poll_ajout_reponse'])){
 			$this->ajouter_reponse();
@@ -182,10 +201,20 @@ class Poll_Widget extends WP_Widget
 		if(isset($_POST['reset_bdd'])){
 			$this->reset_bdd();
 		}
+	}
+
+
+	/**
+	 * Définit ce qu'il faut faire lorsqu on valide le formulaire sur le front office
+	 */
+	public function process_action_front()
+	{
 		if(isset($_POST['reponse_client'])){
 			$this->ajout_reponse_client();
 		}
 	}
+
+
 
 
 
@@ -226,27 +255,11 @@ class Poll_Widget extends WP_Widget
 
 		global $wpdb;
 		$recipients_options = $wpdb->get_results("SELECT id,label FROM wp_poll_options");
-		if(!isset($_POST['reponse_client']))
-		{	
-?>
-		<h4><?php echo get_option('poll_question');?> </h4></br>
-		<form action="" method="post">
-		<p>
-			<?php foreach ($recipients_options as $_recipient) { ?>
-				<label for ="<?php echo $_recipient->id;?>"> <?php echo $_recipient->label;?></label>
-				<input type="radio" name="reponse_client" value="<?php echo $_recipient->id;?>" id="<?php echo $_recipient->id;?>"/></br></br>
-<?php			
-			}
-?>		
-		</p></br>
-		<input type="submit"/>
-		</form>
-<?php
-		}
-		else
+
+		if(isset($_COOKIE['vote'])||isset($_POST['reponse_client']) )
 		{
 ?>			
-			<h4> Résultats </h4></br>
+			<h4> Résultats  COucou</h4></br>
 <?php	
 			$recipients_options = $wpdb->get_results("SELECT id,label FROM wp_poll_options");			
 			foreach($recipients_options as $_recipient) { 
@@ -260,6 +273,27 @@ class Poll_Widget extends WP_Widget
 				}	
 			}
 		}
+
+		else 
+		{
+?>			
+		<h4><?php echo get_option('poll_question');?> </h4></br>
+		<form action="" method="post">
+		<p>
+			<?php foreach ($recipients_options as $_recipient) { ?>
+				<label for ="<?php echo $_recipient->id;?>"> <?php echo $_recipient->label;?></label>
+				<input type="radio" name="reponse_client" value="<?php echo $_recipient->id;?>" id="<?php echo $_recipient->id;?>"/></br></br>
+<?php			
+			}
+?>		
+		</p></br>
+		<input type="submit"/>
+		</form>
+<?php
+
+		}
+
+
 
 		echo $args['after_widget'];
     }
